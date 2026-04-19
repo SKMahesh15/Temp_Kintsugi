@@ -39,6 +39,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Job not found")
     return db_job
 
+# check database.py for connection details
 # cd backend
 # ./venv/bin/python -m uvicorn main:app --reload
 # http://127.0.0.1:8000/docs
