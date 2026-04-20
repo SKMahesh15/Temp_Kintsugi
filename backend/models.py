@@ -10,7 +10,7 @@ class Job(Base):
     script = Column(String, nullable = False)
     target_url = Column(String, nullable = False)
     status = Column(String, default="queued")
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     # selectors = relationship("Selector", back_populates="job")
     # logs = relationship("HealLog", back_populates="job")
@@ -20,10 +20,10 @@ class Selectors(Base):
 
     selector_id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("jobs.job_id", ondelete="CASCADE"), nullable=False)
-    intent = Column(String)
-    selector = Column(String)
-    last_success_aom = Column(JSON)
-    updated_at = Column(DateTime, default=datetime.now(UTC))
+    intent = Column(String, index=True) #index=True here because intent is constantly being fetched by middleware
+    selector = Column(String, nullable=False)
+    last_success_aom = Column(JSON, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 class HealLogs(Base):
     __tablename__ = "heal_logs"
@@ -35,4 +35,4 @@ class HealLogs(Base):
     new_selector = Column(String)
     broken_aom = Column(JSON)
     confidence = Column(Float)
-    healed_at = Column(DateTime, default=datetime.now(UTC))
+    healed_at = Column(DateTime, default=lambda: datetime.now(UTC))
