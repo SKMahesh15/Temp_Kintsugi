@@ -38,6 +38,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     return db_job
 
 
+#endpoint for returning a Selector instance (a row) which has the intent as requested by middleware
 @app.get("/selectors/", response_model=schemas.SelectorResponse)
 def get_intent(intent: str, db: Session = Depends(get_db)):
     selector = db.query(models.Selectors).filter(models.Selectors.intent == intent).first()
@@ -45,7 +46,7 @@ def get_intent(intent: str, db: Session = Depends(get_db)):
     if selector:
         return selector
     else:
-        raise HTTPException(status_code=404, detail=f"script is running for the first time hence {intent} does nto exists in the db")
+        raise HTTPException(status_code=404, detail=f"script is running for the first time hence {intent} does not exists in the db")
 
 @app.post("/selectors/", response_model=schemas.SelectorResponse, status_code=201)
 def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_db)):
