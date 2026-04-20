@@ -15,7 +15,7 @@ class JobResponse(BaseModel): # sent to fe
     created_at: datetime
 
     class Config:
-        from_attributes = True # when i ask row info from db, return json response to fe
+        from_attributes = True #fastapi basically converts sqlalchemy object to json object and then returns it to client
 
 class SelectorBase(BaseModel):
 #selector id is auto created by db
@@ -27,6 +27,8 @@ class SelectorBase(BaseModel):
 class SelectorResponse(SelectorBase):
     selector_id: int
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
 
 class HealLogBase(BaseModel):
     # no heal log id either
@@ -40,3 +42,5 @@ class HealLogBase(BaseModel):
 class HealLogResponse(HealLogBase):
     heal_id: int
     healed_at: datetime
+
+    model_config = {"from_attributes": True}

@@ -5,8 +5,6 @@ from database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
-# python is gayyyyyyyyyyyyy
-
 app = FastAPI()
 
 def get_db():
@@ -19,7 +17,7 @@ def get_db():
 @app.post("/jobs/", response_model=schemas.JobResponse)
 def create_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
 
-    # create a new hob isntance
+    # create a new job instance
     db_job = models.Job(
         script=job.script,
         target_url=job.target_url,

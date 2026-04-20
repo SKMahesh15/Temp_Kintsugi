@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 from database import Base
 
 class Job(Base):
@@ -10,7 +10,29 @@ class Job(Base):
     script = Column(String, nullable = False)
     target_url = Column(String, nullable = False)
     status = Column(String, default="queued")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(UTC))
 
     # selectors = relationship("Selector", back_populates="job")
     # logs = relationship("HealLog", back_populates="job")
+
+class Selectors(Base):
+    __tablename__ = "selectors"
+
+    selector_id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.job_id", ondelete="CASCADE"), nullable=False)
+    intent = Column(String)
+    selector = Column(String)
+    last_success_aom = Column(JSON)
+    updated_at = Column(DateTime, default=datetime.now(UTC))
+
+class HealLogs(Base):
+    __tablename__ = "heal_logs"
+
+    heal_id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.job_id", ondelete="CASCADE"), nullable=False)
+    intent = Column(String)
+    old_selector = Column(String)
+    new_selector = Column(String)
+    broken_aom = Column(JSON)
+    confidence = Column(Float)
+    healed_at = Column(DateTime, default=datetime.now(UTC))
