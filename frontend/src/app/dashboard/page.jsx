@@ -1,47 +1,47 @@
 "use client";
 import { useState } from "react";
-import DotGrid from "@/components/DotGrid";
+import Particles from "@/components/Particles";
 import AddButton from "@/components/AddButton";
+import JobModal from "@/components/JobModal";
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <main className="min-h-screen w-full bg-[#0a0a0a] relative">
+    <main className="relative min-h-screen w-full bg-[#030303] overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <DotGrid
-          dotSize={5}
-          gap={15}
-          baseColor="#2F293A"
-          activeColor="#5227FF"
-          proximity={120}
-          shockRadius={250}
-          shockStrength={5}
-          resistance={750}
-          returnDuration={1.5}
+        <Particles
+          particleCount={150}
+          particleColors={["#00c97a", "#b6ffd9"]}
+          particleSize={2}
+          className="h-full w-full"
+          moveSpeed={2}
+          interactive={true}
         />
       </div>
 
-      <div className="relative z-10 w-full h-full p-12 lg:p-20">
-        <div className="flex justify-between items-start w-full">
-          <AddButton onClick={() => setIsModalOpen(true)} text="Add job" />
+      <div className="relative z-10 p-10 lg:p-14">
+        <div className="flex justify-between items-start">
+          <AddButton 
+            onClick={() => setIsModalOpen(true)} 
+            text="Add job" 
+            color="#00c97a" 
+            textColor="#b6ffd9" 
+          />
+
+          <div className="text-right select-none">
+            <h1 className="text-2xl font-bold text-white tracking-tighter">KINTSUGI</h1>
+            <p className="text-[10px] text-[#00c97a] font-mono tracking-[0.2em] uppercase">Status: Active</p>
+          </div>
         </div>
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-8 shadow-2xl">
-            <h2 className="text-white text-xl font-semibold mb-6">Create New Job</h2>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-zinc-400 hover:text-white transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <JobModal 
+            isOpen={isModalOpen} 
+            onClose={() => setIsModalOpen(false)} 
+            color="#00c97a" 
+            />
       )}
     </main>
   );
