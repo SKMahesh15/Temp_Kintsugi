@@ -39,8 +39,15 @@ class HealLogBase(BaseModel):
     broken_aom: Dict[str, Any]
     confidence: float
 
-class HealLogResponse(HealLogBase):
-    heal_id: int
-    healed_at: datetime
+#this schema is required to validate the incoming request body sent by middlware when it calls POST /heal
+class HealRequest(BaseModel):
+    job_id: int
+    intent: str
+    old_selector: str
+    broken_aom: Dict[str, Any]
+
+class HealLogResponse(BaseModel):
+    new_selector: str
+    confidence: float
 
     model_config = {"from_attributes": True}

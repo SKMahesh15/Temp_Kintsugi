@@ -2,6 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import models, schemas
 from database import SessionLocal, engine
+import os
+import json
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+from datetime import datetime, UTC
+
+load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -37,6 +45,17 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Job not found")
     return db_job
 
+@app.patch("/jobs/{job_id}", response_model=schemas.JobResponse)
+def update_status(job_id: int, status: str, db: Session = Depends(get_db)):
+    old_job_status = db.query(models.Job).filter(models.Job.job_id == job_id).first()
+    if not old_job_status:
+        raise HTTPException(status_code=404, detail=f"{job_id} does not exists")
+    
+    old_job_status.status = status
+    db.commit()
+    db.refresh(old_job_status)
+    return old_job_status
+
 
 #endpoint for returning a Selector instance (a row) which has the intent as requested by middleware
 @app.get("/selectors/", response_model=schemas.SelectorResponse)
@@ -71,6 +90,87 @@ def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_
         db.commit()
         db.refresh(new_selector)
         return new_selector
+    
+@app.post("/heal/", response_model=schemas.HealLogResponse)
+async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(get_db)):
+
+    target_job_id = heal_body.job_id
+    target_intent = heal_body.intent
+
+    #updating the status from queued to healing for fe
+    the_job = db.query(models.Job).filter(models.Job.job_id == target_job_id).first()
+    the_job.status = 'healing'
+    db.commit()
+    db.refresh(the_job)
+
+    selector_row = db.query(models.Selectors).filter(models.Selectors.job_id == target_job_id, models.Selectors.intent == target_intent).first()
+    if not selector_row:
+        raise HTTPException(status_code=400, detail="No successful run recorded for this intent. Kintsugi can only heal selectors that have worked before.")
+    last_success_aom = selector_row.last_success_aom
+    broken_aom = heal_body.broken_aom
+  
+    prompt = f"""
+        You are an expert web automation agent and QA engineer. Your task is to self-heal a broken UI test by finding the correct new CSS selector for an element that has changed.
+
+        Here is the historical context of the element when the test last passed:
+        --- LAST SUCCESSFUL AOM ---
+        {last_success_aom}
+
+        Here is the current state of the page:
+        --- CURRENT PAGE AOM ---
+        {broken_aom}
+
+        The functional intent of this element is: "{target_intent}"
+
+        Instructions:
+        1. Analyze the 'target_intent' and the 'LAST SUCCESSFUL AOM' to understand the element's core purpose, text content, and semantic role.
+        2. Scan the 'CURRENT PAGE AOM' to find the element that best fulfills this intent and matches the historical profile (allow for dynamic classes or changed IDs).
+        3. Formulate a robust, unique CSS selector for this new element. Prefer data-attributes, aria-labels, and semantic structure over brittle utility classes.
+
+        Respond ONLY with a valid JSON object in this exact format. Do not use markdown tags (no ```json):
+        {{
+            "new_selector": "css_selector_here",
+            "confidence": 0.0_to_1.0
+        }}
+    """
+    
+    client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+
+    response = await client.aio.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents=f"{prompt}",
+        config=types.GenerateContentConfig(response_mime_type="application/json")
+    )
+    response_dict = json.loads(response.text)
+
+    new_selector = response_dict.get('new_selector')
+    confidence = response_dict.get('confidence')
+
+    #updating the Selectors db table:
+    selector_row.selector = new_selector
+    selector_row.last_success_aom = broken_aom
+    selector_row.updated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(selector_row)
+
+    #saving info in the HealLogs db table healLogs required for the frontend:
+    new_heal_log = models.HealLogs(
+        job_id = target_job_id,
+        intent = target_intent,
+        old_selector = heal_body.old_selector,
+        new_selector = new_selector,
+        broken_aom = broken_aom,
+        confidence = confidence,
+        healed_by = 'gemini'
+    )
+    db.add(new_heal_log)
+    db.commit()
+    db.refresh(new_heal_log)
+
+    the_job.status = 'healed'
+    db.commit()
+    db.refresh(the_job)
+    return new_heal_log
 
 # check database.py for connection details
 # cd backend
