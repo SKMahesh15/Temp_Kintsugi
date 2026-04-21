@@ -37,6 +37,7 @@ class HealLogBase(BaseModel):
     old_selector: str
     new_selector: str
     broken_aom: Dict[str, Any]
+    healed_by: str
     confidence: float
 
 #this schema is required to validate the incoming request body sent by middlware when it calls POST /heal

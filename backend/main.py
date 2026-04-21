@@ -172,6 +172,15 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     db.refresh(the_job)
     return new_heal_log
 
+@app.post("/heal_logs", status_code=201)
+def new_heal_log(heal_log: schemas.HealLogBase, db: Session = Depends(get_db)):
+    new_heal_log = models.HealLogs(**heal_log.model_dump())
+    db.add(new_heal_log)
+    db.commit()
+    db.refresh(new_heal_log)
+    return {"message": "heal log saved successfully"}
+
+
 # check database.py for connection details
 # cd backend
 # ./venv/bin/python -m uvicorn main:app --reload
