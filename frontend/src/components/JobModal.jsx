@@ -36,7 +36,7 @@ const JobModal = ({ isOpen, onClose, color = "#00c97a" }) => {
           <div className="flex justify-end gap-4 pt-4">
             <button 
               onClick={onClose}
-              className="px-6 py-2 text-xs text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
+              className="px-6 py-2  text-xs text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
             >
               Cancel
             </button>
