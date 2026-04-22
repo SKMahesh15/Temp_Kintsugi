@@ -93,19 +93,20 @@ def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_
     if existing_selector:
         #updating the already existing selector instance (basically the db row) so that it stores the lastest changes
         existing_selector.intent = selector.intent
-        existing_selector.last_success_aom = selector.last_success_aom
+        existing_selector.last_success_dom = selector.last_success_dom
         existing_selector.selector = selector.selector
         db.commit()
         db.refresh(existing_selector)
         return existing_selector
     else:
-        #creating a new selector instance and saving the job_id, intent, selector, last_success_aom to the db (Selectors table)
+        #creating a new selector instance and saving the job_id, intent, selector, last_success_dom to the db (Selectors table)
         new_selector = models.Selectors(**selector.model_dump())
         db.add(new_selector)
         db.commit()
         db.refresh(new_selector)
         return new_selector
-    
+
+#this endpoint is the 4th layer of the middleware, the gemini fallback  
 @app.post("/heal/", response_model=schemas.HealLogResponse)
 async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(get_db)):
 
@@ -114,6 +115,8 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
 
     #updating the status from queued to healing for fe
     the_job = db.query(models.Job).filter(models.Job.job_id == target_job_id).first()
+    if not the_job:
+        raise HTTPException(status_code=404, detail=f"job with id: {target_job_id} not found")
     the_job.status = 'healing'
     db.commit()
     db.refresh(the_job)
@@ -121,25 +124,27 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     selector_row = db.query(models.Selectors).filter(models.Selectors.job_id == target_job_id, models.Selectors.intent == target_intent).first()
     if not selector_row:
         raise HTTPException(status_code=400, detail="No successful run recorded for this intent. Kintsugi can only heal selectors that have worked before.")
-    last_success_aom = selector_row.last_success_aom
-    broken_aom = heal_body.broken_aom
+    last_success_dom = selector_row.last_success_dom
+    current_dom = heal_body.current_dom
   
     prompt = f"""
-        You are an expert web automation agent and QA engineer. Your task is to self-heal a broken UI test by finding the correct new CSS selector for an element that has changed.
+        You are an expert web automation agent and QA engineer. Your task is to self-heal a broken UI test by finding the correct new CSS selector for an element that has changed and also make sure to cover non-interactive elements as well.
+
+        you will be given a stripped DOM that contains both interactive as well as non-interactive elements, dont disregard the non-interactive elements.
 
         Here is the historical context of the element when the test last passed:
-        --- LAST SUCCESSFUL AOM ---
-        {last_success_aom}
+        --- LAST SUCCESSFUL DOM (stripped DOM) ---
+        {last_success_dom}
 
         Here is the current state of the page:
-        --- CURRENT PAGE AOM ---
-        {broken_aom}
+        --- CURRENT PAGE DOM (again stripped DOM) ---
+        {current_dom}
 
         The functional intent of this element is: "{target_intent}"
 
         Instructions:
-        1. Analyze the 'target_intent' and the 'LAST SUCCESSFUL AOM' to understand the element's core purpose, text content, and semantic role.
-        2. Scan the 'CURRENT PAGE AOM' to find the element that best fulfills this intent and matches the historical profile (allow for dynamic classes or changed IDs).
+        1. Analyze the 'target_intent' and the 'LAST SUCCESSFUL DOM' to understand the element's core purpose, text content, and semantic role.
+        2. Scan the 'CURRENT PAGE DOM' to find the element that best fulfills this intent and matches the historical profile (allow for dynamic classes or changed IDs).
         3. Formulate a robust, unique CSS selector for this new element. Prefer data-attributes, aria-labels, and semantic structure over brittle utility classes.
 
         Respond ONLY with a valid JSON object in this exact format. Do not use markdown tags (no ```json):
@@ -163,7 +168,7 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
 
     #updating the Selectors db table:
     selector_row.selector = new_selector
-    selector_row.last_success_aom = broken_aom
+    selector_row.last_success_dom = current_dom
     selector_row.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(selector_row)
@@ -174,7 +179,7 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
         intent = target_intent,
         old_selector = heal_body.old_selector,
         new_selector = new_selector,
-        broken_aom = broken_aom,
+        current_dom = current_dom,
         confidence = confidence,
         healed_by = 'gemini'
     )
