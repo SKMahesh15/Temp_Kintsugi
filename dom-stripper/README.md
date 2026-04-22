@@ -2,7 +2,57 @@ Kintsugi DOM Stripper: Test Guide
 
 This tool reduces a massive, messy live DOM into a clean, token-efficient JSON for our AI agents. It uses an 11-pass stripping pipeline to remove noise while preserving critical interactive elements via the AOM (Accessibility Object Model) Gate.
 
-Manual Console Testing
+-------------Python testing-------------------
+create the file : middleware/inject.py
+
+```python
+    from pathlib import Path
+    import json
+
+    # Path resolution: Go up to KINTSUGI root, then into dom-stripper
+    BUNDLE_PATH = Path(__file__).parent.parent / "dom-stripper" / "dist" / "bundle.iife.js"
+
+    async def get_stripped_dom(page):
+        """
+        Injects the Kintsugi bundle into the current Playwright page 
+        and returns the processed DOM JSON.
+        """
+        if not BUNDLE_PATH.exists():
+            raise FileNotFoundError(
+                f"❌ Bundle not found at {BUNDLE_PATH}. "
+                "Make sure someone has run 'npm run build' in the dom-stripper folder."
+            )
+
+        # Read the bundled JS
+        bundle_code = BUNDLE_PATH.read_text(encoding="utf-8")
+
+        # Inject the entire stripper logic into the browser
+        await page.evaluate(bundle_code)
+
+        # Execute the orchestrator and capture the JSON result
+        print("🛡️  Kintsugi: Stripping DOM...")
+        stripped_dom = await page.evaluate("Kintsugi.extractStrippedDOM()")
+        
+        return stripped_dom
+```
+then import it like so:
+
+
+```python
+
+    from inject import get_stripped_dom
+
+    async def on_automation_failure(page):
+        # 1. Get the cleaned DOM
+        dom_data = await get_stripped_dom(page)
+        
+        print(f"✅ Received {len(dom_data)} optimized nodes.")
+        
+        # 2. Feed dom_data to the AI Agent
+        # response = await agent.get_fix(dom_data)
+```
+
+---------------Manual Console Testing---------------------
 
 If you want to test the reduction performance on any live website (Amazon, GitHub, Salesforce), follow these steps:
 
