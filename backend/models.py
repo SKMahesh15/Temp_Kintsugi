@@ -22,7 +22,7 @@ class Selectors(Base):
     job_id = Column(Integer, ForeignKey("jobs.job_id", ondelete="CASCADE"), nullable=False)
     intent = Column(String, index=True) #index=True here because intent is constantly being fetched by middleware
     selector = Column(String, nullable=False)
-    last_success_aom = Column(JSON, nullable=False)
+    last_success_dom = Column(JSON, nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 class HealLogs(Base):
@@ -33,6 +33,7 @@ class HealLogs(Base):
     intent = Column(String)
     old_selector = Column(String)
     new_selector = Column(String)
-    broken_aom = Column(JSON)
+    current_dom = Column(JSON)
     confidence = Column(Float)
+    healed_by = Column(String)
     healed_at = Column(DateTime, default=lambda: datetime.now(UTC))
