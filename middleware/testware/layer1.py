@@ -23,8 +23,10 @@ if exCode == 1:
     prevName = os.path.basename(path).split(".")[0]
     idUs = match.group(1) if match else None
     
+    # Takes previous HTML element from json
     prevJson = load_json(f"test_json/{prevName}_s.json")
     print(prevJson['layer_1_identity'])
+
 
     currJson = load_json(f"test_json/{prevName}_us.json")
     print(currJson['layer_1_identity'])
