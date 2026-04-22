@@ -3,7 +3,7 @@ import React from 'react'
 import PixelBlast from '../../Components/PixelBlast.jsx'
 import EncryptButton from '../../Components/button.jsx'
 import Shuffle from '../../Components/Shuffle.jsx'
-
+import Link from 'next/link';
 const Home = () => {
   return (
     <div className="relative h-screen w-full overflow-hidden bg-neutral-950">
@@ -45,7 +45,9 @@ const Home = () => {
             <p className="font-mono text-xs uppercase tracking-widest text-neutral-500">
                 Click Here to Start 
             </p>
+            <Link href="/dashboard">
             <EncryptButton />
+        </Link>
         </div>
         
       </div>
