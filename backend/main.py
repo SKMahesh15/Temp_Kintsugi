@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas
 from database import SessionLocal, engine
@@ -14,6 +15,15 @@ load_dotenv()
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# cors
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()
@@ -44,6 +54,11 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     if db_job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return db_job
+
+# get all jobs endpoint
+@app.get("/jobs/", response_model=list[schemas.JobResponse])
+def get_all_jobs(db: Session = Depends(get_db)):
+    return db.query(models.Job).all()
 
 @app.patch("/jobs/{job_id}", response_model=schemas.JobResponse)
 def update_status(job_id: int, status: str, db: Session = Depends(get_db)):
