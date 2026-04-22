@@ -32,7 +32,8 @@ export const processAOMNode = (el) => {
   // bypass checks - if it has AOM data, we want to preserve it and not let any strip touch it. 
   if (!hasAOMData(el)) return null;
 
-  // mark for preservation - this will prevent any strip from touching it, even if it's empty. We will handle it in the end when we emit the final node data.
+  // mark for preservation (like literally make it <button data-aom-protected = "true">
+  // this will prevent any strip from touching it, even if it's empty. We will handle it in the end when we emit the final node data.
   el.dataset.aomProtected = "true";
 
   const resolveId = (id) => id ? document.getElementById(id)?.innerText?.trim() ?? '' : '';
