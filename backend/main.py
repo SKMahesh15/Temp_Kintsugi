@@ -120,13 +120,10 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     target_job_id = heal_body.job_id
     target_intent = heal_body.intent
 
-    #updating the status from queued to healing for fe
+    #just a validation check, not meant for updating the status of job
     the_job = db.query(models.Job).filter(models.Job.job_id == target_job_id).first()
     if not the_job:
         raise HTTPException(status_code=404, detail=f"job with id: {target_job_id} not found")
-    the_job.status = 'healing'
-    db.commit()
-    db.refresh(the_job)
 
     selector_row = db.query(models.Selectors).filter(models.Selectors.job_id == target_job_id, models.Selectors.intent == target_intent).first()
     if not selector_row:
@@ -193,10 +190,6 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     db.add(new_heal_log)
     db.commit()
     db.refresh(new_heal_log)
-
-    the_job.status = 'healed'
-    db.commit()
-    db.refresh(the_job)
     return new_heal_log
 
 @app.post("/heal_logs", status_code=201)
