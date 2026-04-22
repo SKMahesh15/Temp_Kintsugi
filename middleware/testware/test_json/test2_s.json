@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "intent": "submit_job_application",
+    "url": "file://test2.html",
+    "type": "interaction"
+  },
+  "layer_1_identity": {
+    "tag": "button",
+    "id": "submit-application",
+    "classes": ["submit-btn"],
+    "data_attributes": {
+      "type": "button"
+    }
+  },
+  "layer_2_context": {
+    "parent_id": "application-form-panel",
+    "siblings": {
+      "previous": "div.divider",
+      "next": "p.form-note"
+    }
+  },
+  "layer_3_semantics": {
+    "inner_text": "Continue to Next Step →",
+    "role": "button"
+  },
+  "layer_4_llm_snippet": {
+    "target_html": "<button id='submit-application' class='submit-btn' type='button'>Continue to Next Step →</button>",
+    "skeleton_context": "<div id='application-form-panel'><form>...<div class='divider'></div>[TARGET_HERE]<p class='form-note'>...</p></form></div>"
+  }
+}

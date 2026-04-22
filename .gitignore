@@ -1,4 +1,5 @@
 backend/.venv/
 backend/__pycache__/
 backend/*.pyc
+middleware/testware/__pycache__/
 .env
