@@ -1,8 +1,8 @@
 "use client";
 import React from 'react'
-import PixelBlast from '../../Components/PixelBlast.jsx'
-import EncryptButton from '../../Components/button.jsx'
-import Shuffle from '../../Components/Shuffle.jsx'
+import PixelBlast from '@/components/PixelBlast.jsx'
+import EncryptButton from '@/components/Button.jsx'
+import Shuffle from '@/components/Shuffle.jsx'
 
 const Home = () => {
   return (
