@@ -1,11 +1,9 @@
-import { generateXPath } from '../utils/xpath.js';
+import { getResilientXPath } from '../utils/xpath.js';
 
-/**
- * Transforms a surviving DOM element into the final JSON output shape.
- */
 export const emitNode = (el) => {
   const style = window.getComputedStyle(el);
-  
+  const resolveId = (id) => id ? document.getElementById(id)?.innerText?.trim() ?? '' : '';
+
   return {
     tag: el.tagName.toLowerCase(),
     innerText: el.innerText?.trim() || "",
@@ -19,14 +17,14 @@ export const emitNode = (el) => {
     ),
     role: el.getAttribute('role') || "",
     ariaLabel: el.getAttribute('aria-label') || "",
-    ariaDescription: el.getAttribute('aria-description') || "", // Logic for labelleby/describedby handled in AOM Gate
-    ariaLabelledBy: el.getAttribute('aria-labelledby') || "",
+    ariaDescription: resolveId(el.getAttribute('aria-describedby')),
+    ariaLabelledBy: resolveId(el.getAttribute('aria-labelledby')),
     tabindex: el.getAttribute('tabindex') || "",
     depth: el._depth || 0,
     zIndex: parseInt(style.zIndex) || 0,
     overlay: !!el._overlay,
     overlayWarning: el._overlayWarning || "",
     priority: el._priority || "low",
-    xpath: generateXPath(el)
+    xpath: getResilientXPath(el)
   };
 };

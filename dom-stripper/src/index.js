@@ -1,4 +1,4 @@
-import { waitForNetworkSettle, getShadowRoots } from './prechecks/settle.js';
+import { waitForNetworkSettle } from './prechecks/settle.js';
 import { processAOMNode } from './prechecks/aomGate.js';
 import { applyStrip1 } from './strips/strip1_blocklist.js';
 import { applyStrip2 } from './strips/strip2_visibility.js';
@@ -20,22 +20,21 @@ export const extractStrippedDOM = async () => {
   const startTime = performance.now();
 
   await waitForNetworkSettle();
+  
+  // Adjusted to only use document since getShadowRoots isn't in your settle.js
+  const allRoots = [document];
 
-  const shadowRoots = getShadowRoots();
-  const allRoots = [document, ...shadowRoots];
-
-  const aomNodes = [];
+  const rawAOMNodes = [];
   const candidateElements = [];
-
-  // initial Count
   let rawCount = 0;
+
   for (const root of allRoots) {
     const elms = collectElements(root);
     rawCount += elms.length;
     for (const el of elms) {
       const aomNode = processAOMNode(el);
       if (aomNode) {
-        aomNodes.push(aomNode);
+        rawAOMNodes.push({ el, aomNode });
         continue;
       }
       candidateElements.push(el);
@@ -43,22 +42,21 @@ export const extractStrippedDOM = async () => {
   }
 
   console.log(`Initial Nodes: ${rawCount}`);
-  console.log(`VIP AOM Nodes Preserved: ${aomNodes.length}`);
+  console.log(`VIP AOM Nodes Preserved: ${rawAOMNodes.length}`);
 
   const strips = [
-    { name: 'Blocklist', fn: applyStrip1 },
+    { name: 'Blocklist',  fn: applyStrip1 },
     { name: 'Visibility', fn: applyStrip2 },
     { name: 'Positional', fn: applyStrip3 },
-    { name: 'ZeroSize', fn: applyStrip4 },
-    { name: 'Offscreen', fn: applyStrip5 },
-    { name: 'EmptyText', fn: applyStrip6 },
-    { name: 'Collapse', fn: applyStrip7 },
-    { name: 'DepthCap', fn: applyStrip8 },
+    { name: 'ZeroSize',   fn: applyStrip4 },
+    { name: 'Offscreen',  fn: applyStrip5 },
+    { name: 'EmptyText',  fn: applyStrip6 },
+    { name: 'Collapse',   fn: applyStrip7 },
+    { name: 'DepthCap',   fn: applyStrip8 },
   ];
 
   let surviving = candidateElements;
-  
-  // execute pipleine for each strip and print
+
   strips.forEach(strip => {
     const before = surviving.length;
     surviving = strip.fn(surviving);
@@ -68,21 +66,33 @@ export const extractStrippedDOM = async () => {
     }
   });
 
-  // fiinal  passes
+  const before9 = surviving.length;
   surviving = applyStrip9(surviving);
+  console.log(`[Dedup] Removed: ${before9 - surviving.length}`);
+
   surviving = applyStrip10(surviving);
+  const aomEls = rawAOMNodes.map(n => n.el);
+  applyStrip10(aomEls);
+
+  const before11 = surviving.length;
   surviving = applyStrip11(surviving);
+  console.log(`[Priority] Tagged: ${surviving.length} nodes`);
 
   const emittedRegular = surviving.map(emitNode);
-  const emittedAOM = aomNodes;
 
-  const overlays = emittedRegular.filter(n => n.overlay);
-  const rest = emittedRegular.filter(n => !n.overlay);
+  const emittedAOM = rawAOMNodes.map(({ el, aomNode }) => {
+    const base = emitNode(el);
+    return { ...base, ...aomNode, vip: true };
+  });
 
-  const finalResult = [...overlays, ...emittedAOM, ...rest];
-  
+  const aomOverlays    = emittedAOM.filter(n => n.overlay);
+  const aomNonOverlays = emittedAOM.filter(n => !n.overlay);
+  const regOverlays    = emittedRegular.filter(n => n.overlay);
+  const regRest        = emittedRegular.filter(n => !n.overlay);
+
+  const finalResult = [...aomOverlays, ...regOverlays, ...aomNonOverlays, ...regRest];
+
   const endTime = performance.now();
-  
   console.log(`---`);
   console.log(`Final Nodes: ${finalResult.length}`);
   console.log(`Reduction: ${((1 - finalResult.length / rawCount) * 100).toFixed(2)}%`);
@@ -91,3 +101,10 @@ export const extractStrippedDOM = async () => {
 
   return finalResult;
 };
+
+const Kintsugi = {
+    extractStrippedDOM
+};
+
+export default Kintsugi;
+
