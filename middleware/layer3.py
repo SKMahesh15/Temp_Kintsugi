@@ -1,29 +1,43 @@
-import json
-import faiss
-from sentence_transformers import SentenceTransformer
-import re 
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
-# Note: This is tuned for my JSON file once I get the Main Stripped json version I can finetune it accordingly.
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
+def build_text(node):
+    parts = [
+        node.get("tag", ""),
+        node.get("innerText", ""),
+        node.get("ariaLabel", ""),
+        node.get("placeholder", ""),
+        node.get("id", ""),
+        node.get("role", ""),
+    ]
+    return " ".join(p for p in parts if p).strip()
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-def embed_encode(string):
-    vec = model.encode([string]).astype("float32")
-    return vec
+def layer3_match(prev, currJson):
+    target_text = build_text(prev)
 
-def ret_prev(error, page_url):
-    match = re.search(r'"(#[^"]+)"', error['Code:'])
+    target_vector = embedding_model.encode(
+        [target_text],
+        normalize_embeddings=True
+    )[0]
 
-    if not match:
-        return None
-    id_to_search = match.group(1)
-    page = page_url.split("/")[-1]
-
-    index = faiss.read_index(f"{page}_successfull.index")
-
-    query = embed_encode(f"button id {id_to_search}").reshape(1, -1)
-    D, I = index.search(query, 1)
-    found_idx = str(I[0][0])
+    candi = []
+    candi_text = []
     
-    return found_idx
+    for cur in currJson:
+        cur_text = build_text(cur)
+
+        if cur_text:
+            candi.append(cur)
+            candi_text.append(cur_text)
+
+    candidate_vectors = embedding_model.encode(candi_text, normalize_embeddings=True)
+
+    similarities = np.dot(candidate_vectors, target_vector)
+
+    best_index = int(np.argmax(similarities))
+    best_score = float(similarities[best_index])
+    
+    return (candi[best_index].get("xpath"), best_score)
+
