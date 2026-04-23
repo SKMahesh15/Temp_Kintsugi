@@ -7,13 +7,19 @@ def layer_2_mechanism(old_selector, last_success_dom, current_dom):
 			target_node = node #target_node refers to that node that worked previously, now we need to find the closest match to this node using the find_heuristic_match
 			target_index = i #target_node's index in the last_success_dom, this is required for breaking tie 
 			break
+	else:
+		target_node = None
+		target_index = None
 
+	if target_node is None:
+		return (None, 0.0)
 	result = find_heuristic_match(current_dom, target_node, target_index)
 	return result
 
 def find_heuristic_match(current_dom, target_node, target_index):
 	max_score = 0
-	max_score_node_index = None #None instead of zero because what if no one scores any points, then i will end up returning xpath of the first node, which is incorrect 
+	max_score_node_index = None #None instead of zero because what if no one scores any points, then i will end up returning xpath of the first node, which is incorrect
+	target_xpath = target_node.get('xpath', '')
 
 	for index, node in enumerate(current_dom):
 		current_score = 0
@@ -21,8 +27,6 @@ def find_heuristic_match(current_dom, target_node, target_index):
 		#category-1: tag matching (max score is 30)
 		if node.get('tag') ==  target_node.get('tag'):
 			current_score += 30
-		elif node.get('tag'):
-			current_score += 5 #what if the html element was changed but it serves the same purpose (an anchor tag being replaced by button tag)
 
 
 		#category-2: innerText matching and placeholder fallback (max score 40)
@@ -75,13 +79,25 @@ def find_heuristic_match(current_dom, target_node, target_index):
 			max_score = current_score
 			max_score_node_index = index
 
-		#tie breaker logic: closest one to the target_node must be the node we are looking for
+		#tie breaker logic: xpath + index proximity 
 		elif current_score == max_score and current_score > 0:
-			node_distance = abs(target_index - index)
-			max_score_node_distance = abs(target_index - max_score_node_index)
+			node_xpath = node.get('xpath', '')
+			max_score_node_xpath = current_dom[max_score_node_index].get('xpath', '')
 
-			if node_distance < max_score_node_distance:
+			node_sim = difflib.SequenceMatcher(None, node_xpath, target_xpath).ratio()
+			max_score_node_sim = difflib.SequenceMatcher(None, max_score_node_xpath, target_xpath).ratio()
+
+			#tie breaker-1:
+			if node_sim > max_score_node_sim:
 				max_score_node_index = index
+			
+			elif node_sim == max_score_node_sim:
+				#tie breaker-2:
+				node_distance = abs(target_index - index)
+				max_score_node_distance = abs(target_index - max_score_node_index)
+
+				if node_distance < max_score_node_distance:
+					max_score_node_index = index
 
 	if max_score_node_index is not None:
 		return (current_dom[max_score_node_index].get('xpath'), max_score/100)
