@@ -79,11 +79,9 @@ class KintsugiWrapper:
     async def wrap_action(self, original_method, selector, **kwargs):
         intent = derive_intent(selector)
         try:
-            # 1. Execute original Playwright action
-            result = await original_method(selector, **kwargs)
-            
-            # 2. SUCCESS PATH: Get the ACTUAL XPath of the element for Layer 2 compatibility
-            # We use JS because Playwright's selector might be CSS, but we need XPath in DB.
+            # 1. CAPTURE XPath BEFORE executing the action
+            # This is critical because actions like click() can trigger navigation,
+            # and the element won't exist on the new page.
             actual_xpath = await self.page.evaluate('''
             (sel) => {
             const el = document.querySelector(sel);
@@ -104,8 +102,11 @@ class KintsugiWrapper:
             }
         ''', selector)
 
-            # 3. Update DOM Snapshot
+            # 2. Capture DOM snapshot BEFORE the action (same reason as above)
             dom_snapshot = await self.get_latest_dom()
+
+            # 3. Execute the original Playwright action
+            result = await original_method(selector, **kwargs)
 
             # 4. Save to DB (Always save the XPath version)
             async with httpx.AsyncClient() as client:
@@ -156,9 +157,59 @@ class KintsugiWrapper:
 
         # 3. IDENTIFY TARGET: Find the exact node we are looking for in the baseline
         prev_node = next((n for n in last_success_dom if n.get("xpath") == db_xpath), None)
+        
         if not prev_node:
-            print("[Kintsugi] Baseline node not found in saved DOM.")
-            return None
+            # Fallback: Try matching by the ID extracted from the XPath
+            # e.g. //*[@id="submit-application"] -> look for node with id="submit-application"
+            if db_xpath:
+                import re as _re
+                id_match = _re.search(r'@id=["\']([^"\']+)["\']', db_xpath)
+                if id_match:
+                    target_id = id_match.group(1)
+                    prev_node = next((n for n in last_success_dom if n.get("id") == target_id), None)
+                    if prev_node:
+                        print(f"[Kintsugi] Baseline node found by ID fallback: {target_id}")
+            
+        if not prev_node:
+            # Last resort: Build a synthetic node from the selector info so layers can still try
+            print("[Kintsugi] Baseline node not found in saved DOM. Building synthetic node from selector.")
+            # Extract what we can from the CSS/XPath selector to give layers something to work with
+            synthetic_id = ""
+            if db_xpath:
+                import re as _re
+                id_match = _re.search(r'@id=["\']([^"\']+)["\']', db_xpath)
+                if id_match:
+                    synthetic_id = id_match.group(1)
+            if not synthetic_id:
+                # Try CSS-style: #some-id
+                css_id = old_selector.lstrip('#')
+                if css_id and ' ' not in css_id and '.' not in css_id:
+                    synthetic_id = css_id
+            
+            if synthetic_id:
+                prev_node = {
+                    "tag": "",
+                    "id": synthetic_id,
+                    "xpath": db_xpath or "",
+                    "innerText": "",
+                    "classes": [],
+                }
+                print(f"[Kintsugi] Using synthetic baseline node with id='{synthetic_id}'")
+            else:
+                print("[Kintsugi] Cannot construct baseline. Skipping to Layer 4 (Gemini).")
+                # Skip directly to Layer 4 if we have nothing to work with
+                current_dom = await get_stripped_dom(self.page, STRIP_CONFIG)
+                print("[Kintsugi] Layers 1-3 skipped. Calling Layer 4 (Gemini)...")
+                async with httpx.AsyncClient() as client:
+                    gemini_resp = await client.post(f"{BACKEND_URL}/heal/", json={
+                        "job_id": self.job_id,
+                        "intent": intent,
+                        "old_selector": db_xpath or old_selector,
+                        "current_dom": current_dom
+                    })
+                    if gemini_resp.status_code == 200:
+                        return gemini_resp.json()["new_selector"]
+                return None
 
         # --- LAYER 1: DIRECT MATCH ---
         print("[Kintsugi] Attempting Layer 1 (Direct)...")

@@ -8,7 +8,7 @@ import json
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import subprocess
 import sys
 
@@ -196,7 +196,7 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     #updating the Selectors db table:
     selector_row.selector = new_selector
     selector_row.last_success_dom = current_dom
-    selector_row.updated_at = datetime.now(UTC)
+    selector_row.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(selector_row)
 

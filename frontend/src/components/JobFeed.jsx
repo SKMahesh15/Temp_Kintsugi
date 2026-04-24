@@ -1,40 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Button1 from "@/components/Button1";
-import Modal from "@/components/Modal"; 
-
-export default function JobFeed({color}){
-    const [jobs, setJobs] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    // NEW: Track which job is being viewed
-    const [selectedJobId, setSelectedJobId] = useState(null);
-
-    const fetchJobs = async() => {
-        try{
-            const response = await fetch("http://127.0.0.1:8000/jobs/");
-            const data = await response.json();
-            setJobs(Array.isArray(data) ? data : [data]);
-        }catch(error){
-            console.error("Error fetching jobs:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchJobs();
-        const timer = setInterval(fetchJobs, 3000);
-        return() => clearInterval(timer);
-    },[]);
+export default function JobFeed({ jobs = [], color }) {
 
     const getStatusStyles = (status) => {
       switch(status) {
-        case 'queued': return { bg: '#3b82f620', text: '#3b82f6' };
-        case 'running': return { bg: '#eab30820', text: '#eab308' };
-        case 'healing': return { bg: '#f9731620', text: '#f97316' };
-        case 'healed': return { bg: `${color}20`, text: color };
-        case 'done': return { bg: '#22c55e20', text: '#22c55e' };
-        case 'failed': return { bg: '#ef444420', text: '#ef4444' };
-        default: return { bg: '#27272a', text: '#71717a' };
+        case 'queued':
+          return { bg: '#3b82f620', text: '#3b82f6' };
+        case 'running':
+          return { bg: '#eab30820', text: '#eab308' };
+        case 'healing':
+          return { bg: '#f9731620', text: '#f97316' };
+        case 'healed':
+          return { bg: `${color}20`, text: color };
+        case 'done':
+          return { bg: '#22c55e20', text: '#22c55e' };
+        case 'failed':
+          return { bg: '#ef444420', text: '#ef4444' };
+        default:
+          return { bg: '#27272a', text: '#71717a' };
       }
     };
 
@@ -65,12 +48,6 @@ export default function JobFeed({color}){
               </div>
             </div>
 
-            {/* UPDATED: Pass the specific job_id to the open function */}
-            <Button1 onClick={() => {
-                setSelectedJobId(job.job_id);
-                setIsModalOpen(true);
-            }} />
-
             <div className="flex flex-col items-end">
               <span 
                 className="text-[11px] px-4 py-1.5 rounded-xl font-black uppercase tracking-[0.15em] border transition-all"
@@ -86,13 +63,6 @@ export default function JobFeed({color}){
           </div>
         );
       })}
-
-      {/* NEW: Passing selectedJobId to Modal */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        jobId={selectedJobId}
-      />
     </div>
   );
 }

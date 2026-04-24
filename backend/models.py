@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from database import Base
+from datetime import datetime, timezone
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -10,7 +11,7 @@ class Job(Base):
     script = Column(String, nullable = False)
     target_url = Column(String, nullable = False)
     status = Column(String, default="queued")
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # selectors = relationship("Selector", back_populates="job")
     # logs = relationship("HealLog", back_populates="job")
@@ -23,7 +24,7 @@ class Selectors(Base):
     intent = Column(String, index=True) #index=True here because intent is constantly being fetched by middleware
     selector = Column(String, nullable=False)
     last_success_dom = Column(JSON, nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class HealLogs(Base):
     __tablename__ = "heal_logs"
@@ -36,4 +37,4 @@ class HealLogs(Base):
     current_dom = Column(JSON)
     confidence = Column(Float)
     healed_by = Column(String)
-    healed_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    healed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -16,7 +16,7 @@ export default function DashboardPage() {
       const data = await response.json();
       setJobs(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Fetch failed");
+      console.error("Fetch failed. Is the Python backend running on port 8000?", err);
     }
   };
 
