@@ -265,8 +265,7 @@
     margin: 20px 0;
   }
 
-  /* CHANGED CSS CLASS NAME */
-  .action-btn-submit {
+  .submit-btn {
     width: 100%;
     padding: 14px;
     background: var(--accent);
@@ -282,8 +281,8 @@
     position: relative;
     overflow: hidden;
   }
-  .action-btn-submit:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(127,255,110,0.25); }
-  .action-btn-submit:active { transform: translateY(0); }
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(127,255,110,0.25); }
+  .submit-btn:active { transform: translateY(0); }
 
   .form-note {
     font-family: 'DM Mono', monospace;
@@ -331,6 +330,7 @@
 
 <div class="layout">
 
+  <!-- LEFT: Job Detail -->
   <div class="job-detail" id="job-detail-panel">
     <div class="company-badge">
       <div class="co-logo">N</div>
@@ -381,6 +381,7 @@
     </ul>
   </div>
 
+  <!-- RIGHT: Application Form -->
   <div class="form-panel" id="application-form-panel">
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="form-title">Apply for this role</div>
@@ -433,8 +434,8 @@
 
     <div class="divider"></div>
 
-    <button class="action-btn-submit" id="submit-profile-v2" data-testid="final-submit" type="button" onclick="window.location.href='test3.html'">
-      Confirm & Apply →
+    <button class="submit-btn" id="submit-application" type="button" onclick="window.location.href='test3.html'">
+      Continue to Next Step →
     </button>
 
     <p class="form-note">By applying you agree to our terms. We respond to every application within 5 business days.</p>
