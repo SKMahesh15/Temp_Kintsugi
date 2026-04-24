@@ -205,7 +205,7 @@ class KintsugiWrapper:
         # --- LAYER 4: GEMINI FALLBACK ---
         print("[Kintsugi] Layers 1-3 failed. Calling Layer 4 (Gemini)...")
         async with httpx.AsyncClient() as client:
-            gemini_resp = await client.post(f"{BACKEND_URL}/heal", json={
+            gemini_resp = await client.post(f"{BACKEND_URL}/heal/", json={
                 "job_id": self.job_id,
                 "intent": intent,
                 "old_selector": db_xpath,
