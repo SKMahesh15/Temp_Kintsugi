@@ -144,7 +144,9 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     if not the_job:
         raise HTTPException(status_code=404, detail=f"job with id: {target_job_id} not found")
 
-    selector_row = db.query(models.Selectors).filter(models.Selectors.job_id == target_job_id, models.Selectors.intent == target_intent).first()
+    selector_row = db.query(models.Selectors).filter(
+    models.Selectors.intent == target_intent
+).order_by(models.Selectors.updated_at.desc()).first()
     if not selector_row:
         raise HTTPException(status_code=400, detail="No successful run recorded for this intent. Kintsugi can only heal selectors that have worked before.")
     last_success_dom = selector_row.last_success_dom
