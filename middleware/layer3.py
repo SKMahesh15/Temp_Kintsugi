@@ -16,6 +16,8 @@ def build_text(node):
 
 def layer3_match(prev, currJson):
     target_text = build_text(prev)
+    if not target_text:
+        return (None, 0.0)
 
     target_vector = embedding_model.encode(
         [target_text],
@@ -27,17 +29,17 @@ def layer3_match(prev, currJson):
     
     for cur in currJson:
         cur_text = build_text(cur)
-
         if cur_text:
             candi.append(cur)
             candi_text.append(cur_text)
 
-    candidate_vectors = embedding_model.encode(candi_text, normalize_embeddings=True)
+    if not candi:
+        return (None, 0.0)
 
+    candidate_vectors = embedding_model.encode(candi_text, normalize_embeddings=True)
     similarities = np.dot(candidate_vectors, target_vector)
 
     best_index = int(np.argmax(similarities))
     best_score = float(similarities[best_index])
     
     return (candi[best_index].get("xpath"), best_score)
-
