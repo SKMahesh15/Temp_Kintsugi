@@ -33,7 +33,7 @@ class HealLogs(Base):
     intent = Column(String)
     old_selector = Column(String)
     new_selector = Column(String)
-    current_dom = Column(JSON)
+    broken_aom = Column(JSON)
     confidence = Column(Float)
     healed_by = Column(String)
     healed_at = Column(DateTime, default=lambda: datetime.now(UTC))
