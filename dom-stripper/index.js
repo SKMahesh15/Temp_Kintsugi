@@ -15,10 +15,7 @@ import { emitNode } from './emit/emitNode.js';
 
 const collectElements = (root) => Array.from(root.querySelectorAll('*'));
 
-export const extractStrippedDOM = async () => {
-  console.group('Kintsugi DOM Stripper');
-  const startTime = performance.now();
-
+export const extractStrippedDOM = async (config = {}) => {
   await waitForNetworkSettle();
   const shadowRoots = getShadowRoots();
   const allRoots = [document, ...shadowRoots];
@@ -40,9 +37,6 @@ export const extractStrippedDOM = async () => {
     }
   }
 
-  console.log(`Initial Nodes: ${rawCount}`);
-  console.log(`VIP AOM Nodes Preserved: ${rawAOMNodes.length}`);
-
   const strips = [
     { name: 'Blocklist',  fn: applyStrip1 },
     { name: 'Visibility', fn: applyStrip2 },
@@ -57,60 +51,44 @@ export const extractStrippedDOM = async () => {
   let surviving = candidateElements;
 
   strips.forEach(strip => {
-    const before = surviving.length;
-    surviving = strip.fn(surviving);
-    const after = surviving.length;
-    if (before !== after) {
-      console.log(`[${strip.name}] Removed: ${before - after}`);
+    if (config[strip.name] !== false) {
+      surviving = strip.fn(surviving);
     }
   });
 
-  const before9 = surviving.length;
-  surviving = applyStrip9(surviving);
-  console.log(`[Dedup] Removed: ${before9 - surviving.length}`);
+  if (config['Dedup'] !== false) {
+    surviving = applyStrip9(surviving);
+  }
 
-  applyStrip10(surviving);
-  applyStrip10(rawAOMNodes.map(n => n.el));
+  if (config['Overlay'] !== false) {
+    applyStrip10(surviving);
+    applyStrip10(rawAOMNodes.map(n => n.el));
+  }
 
-  const before11 = surviving.length;
-  surviving = applyStrip11(surviving);
-  console.log(`[Priority] Tagged: ${surviving.length} nodes`);
+  if (config['Priority'] !== false) {
+    surviving = applyStrip11(surviving);
+  }
 
   const emittedRegular = surviving.map(emitNode);
-
   const emittedAOM = rawAOMNodes.map(({ el, aomNode }) => {
     const base = emitNode(el);
     return { ...base, ...aomNode, vip: true };
   });
 
-  const aomOverlays    = emittedAOM.filter(n => n.overlay);
+  const aomOverlays = emittedAOM.filter(n => n.overlay);
   const aomNonOverlays = emittedAOM.filter(n => !n.overlay);
-  const regOverlays    = emittedRegular.filter(n => n.overlay);
-  const regRest        = emittedRegular.filter(n => !n.overlay);
+  const regOverlays = emittedRegular.filter(n => n.overlay);
+  const regRest = emittedRegular.filter(n => !n.overlay);
 
-  const finalResult = [...aomOverlays, ...regOverlays, ...aomNonOverlays, ...regRest];
-
-  const endTime = performance.now();
-  console.log(`---`);
-  console.log(`Final Nodes: ${finalResult.length}`);
-  console.log(`Reduction: ${((1 - finalResult.length / rawCount) * 100).toFixed(2)}%`);
-  console.log(`Execution Time: ${(endTime - startTime).toFixed(2)}ms`);
-  console.groupEnd();
-
-  return finalResult;
+  return [...aomOverlays, ...regOverlays, ...aomNonOverlays, ...regRest];
 };
-
-// Remove the "if (typeof window !== 'undefined')" block and use this instead:
 
 const Kintsugi = {
     extractStrippedDOM
 };
 
-// This ensures that when esbuild wraps this in an IIFE, 
-// 'extractStrippedDOM' is actually returned to the Kintsugi global.
 export default Kintsugi;
 
-// ALSO: Keep the window assignment for double-safety in the browser console
 if (typeof window !== 'undefined') {
     window.extractStrippedDOM = extractStrippedDOM;
     window.Kintsugi = Kintsugi;
