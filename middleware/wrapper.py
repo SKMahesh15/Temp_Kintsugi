@@ -69,26 +69,24 @@ class KintsugiWrapper:
             # 2. SUCCESS PATH: Get the ACTUAL XPath of the element for Layer 2 compatibility
             # We use JS because Playwright's selector might be CSS, but we need XPath in DB.
             actual_xpath = await self.page.evaluate('''
-                (sel) => {
-                    // Try to find the element using Playwright's engine logic
-                    const el = document.querySelector(sel) || 
-                               document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                    if (!el) return null;
-                    
-                    const getXPath = (element) => {
-                        if (element.id !== '') return `//*[@id="${element.id}"]`;
-                        if (element === document.body) return '/html/body';
-                        let ix = 0;
-                        const siblings = element.parentNode.childNodes;
-                        for (let i = 0; i < siblings.length; i++) {
-                            const sibling = siblings[i];
-                            if (sibling === element) return getXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
-                            if (sibling.nodeType === 1 && sibling.tagName === element.tagName) ix++;
-                        }
-                    };
-                    return getXPath(el);
+            (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            
+            const getXPath = (element) => {
+                if (element.id !== '') return `//*[@id="${element.id}"]`;
+                if (element === document.body) return '/html/body';
+                let ix = 0;
+                const siblings = element.parentNode.childNodes;
+                for (let i = 0; i < siblings.length; i++) {
+                    const sibling = siblings[i];
+                    if (sibling === element) return getXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
+                    if (sibling.nodeType === 1 && sibling.tagName === element.tagName) ix++;
                 }
-            ''', selector)
+                };
+            return getXPath(el);
+            }
+        ''', selector)
 
             # 3. Update DOM Snapshot
             dom_snapshot = await self.get_latest_dom()

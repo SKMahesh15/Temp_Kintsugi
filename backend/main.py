@@ -24,7 +24,7 @@ app = FastAPI()
 # cors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", 'http://127.0.0.1:8000/'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,7 +110,7 @@ def get_selector(intent: str, job_id: int, db: Session = Depends(get_db)):
             detail=f"Baseline for intent '{intent}' in job {job_id} not found."
         )
 
-@app.post("/selectors/", response_model=schemas.SelectorResponse, status_code=201)
+@app.post("/selectors", response_model=schemas.SelectorResponse, status_code=201)
 def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_db)):
    
    #need two columns of the Selector table to uniquely indentify the row
