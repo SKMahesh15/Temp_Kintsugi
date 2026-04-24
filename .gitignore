@@ -6,3 +6,4 @@ middleware/testware/test_json/
 middleware/testware/script.py
 node_modules/
 .env
+middleware/__pycache__/

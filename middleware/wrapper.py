@@ -6,10 +6,11 @@ import os
 import importlib.util
 import tempfile
 from pathlib import Path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.async_api import async_playwright
-from middleware.layer1 import layer1_match
-from middleware.layer2 import layer_2_mechanism
-from middleware.layer3 import layer3_match
+from layer1 import layer1_match
+from layer2 import layer_2_mechanism
+from layer3 import layer3_match
 # --- CONFIGURATION ---
 BACKEND_URL = "http://localhost:8000"
 # Adjust this path based on your actual folder structure
