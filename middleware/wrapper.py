@@ -40,7 +40,7 @@ def derive_intent(selector: str) -> str:
 async def update_job_status(job_id: int, status: str):
     """Helper to update job status in the backend."""
     async with httpx.AsyncClient() as client:
-        await client.patch(f"{BACKEND_URL}/jobs/{job_id}", json={"status": status})
+        await client.patch(f"{BACKEND_URL}/jobs/{job_id}/", json={"status": status})
 
 # --- THE INTERCEPTOR (MONKEY PATCHING) ---
 
@@ -93,7 +93,7 @@ class KintsugiWrapper:
 
             # 4. Save to DB (Always save the XPath version)
             async with httpx.AsyncClient() as client:
-                await client.post(f"{BACKEND_URL}/selectors", json={
+                await client.post(f"{BACKEND_URL}/selectors/", json={
                     "job_id": self.job_id,
                     "intent": intent,
                     "selector": actual_xpath or selector,
@@ -126,7 +126,7 @@ class KintsugiWrapper:
         
         # 1. FETCH BASELINE: Get the 'Known Good' state from the DB
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{BACKEND_URL}/selectors?intent={intent}&job_id={self.job_id}")
+            resp = await client.get(f"{BACKEND_URL}/selectors/?intent={intent}&job_id={self.job_id}")
             if resp.status_code != 200:
                 print(f"[Kintsugi] No baseline found for {intent}. Cannot heal.")
                 return None
@@ -149,7 +149,7 @@ class KintsugiWrapper:
         l1_node = layer1_match(prev_node, current_dom)
         if l1_node:
             async with httpx.AsyncClient() as client:
-                await client.post(f"{BACKEND_URL}/selectors", json={
+                await client.post(f"{BACKEND_URL}/selectors/", json={
                     "job_id": self.job_id,
                     "intent": intent,
                     "selector": l1_node['xpath'],
@@ -163,7 +163,7 @@ class KintsugiWrapper:
         l2_xpath, l2_score = layer_2_mechanism(db_xpath, last_success_dom, current_dom)
         if l2_score > 0.8:
             async with httpx.AsyncClient() as client:
-                await client.post(f"{BACKEND_URL}/selectors", json={
+                await client.post(f"{BACKEND_URL}/selectors/", json={
                     "job_id": self.job_id,
                     "intent": intent,
                     "selector": l2_xpath,
@@ -177,7 +177,7 @@ class KintsugiWrapper:
         l3_xpath, l3_score = layer3_match(prev_node, current_dom)
         if l3_score > 0.7:
             async with httpx.AsyncClient() as client:
-                await client.post(f"{BACKEND_URL}/selectors", json={
+                await client.post(f"{BACKEND_URL}/selectors/", json={
                     "job_id": self.job_id,
                     "intent": intent,
                     "selector": l3_xpath,
@@ -203,7 +203,7 @@ class KintsugiWrapper:
     async def log_heal(self, intent, old_sel, new_sel, dom, conf, healer):
         """Submits successful healing data to the backend."""
         async with httpx.AsyncClient() as client:
-            await client.post(f"{BACKEND_URL}/heal_logs", json={
+            await client.post(f"{BACKEND_URL}/heal_logs/", json={
                 "job_id": self.job_id,
                 "intent": intent,
                 "old_selector": old_sel,
@@ -242,7 +242,7 @@ async def patch_page(page, job_id):
 async def get_job_and_load_module(job_id: int):
     """Fetches script from DB and loads it dynamically."""
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BACKEND_URL}/jobs/{job_id}")
+        response = await client.get(f"{BACKEND_URL}/jobs/{job_id}/")
         if response.status_code != 200:
             print(f"Error: Job {job_id} not found.")
             return None

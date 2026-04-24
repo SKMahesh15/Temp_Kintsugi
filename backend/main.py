@@ -24,7 +24,7 @@ app = FastAPI()
 # cors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", 'http://127.0.0.1:8000/'],
+    allow_origins=["http://localhost:3000", 'http://127.0.0.1:8000'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,7 +68,7 @@ def create_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
     # 4. Return the job object to the frontend
     return db_job
 
-@app.get("/jobs/{job_id}", response_model=schemas.JobResponse)
+@app.get("/jobs/{job_id}/", response_model=schemas.JobResponse)
 def get_job(job_id: int, db: Session = Depends(get_db)):
     db_job = db.query(models.Job).filter(models.Job.job_id == job_id).first()
     if db_job is None:
@@ -80,7 +80,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
 def get_all_jobs(db: Session = Depends(get_db)):
     return db.query(models.Job).all()
 
-@app.patch("/jobs/{job_id}", response_model=schemas.JobResponse)
+@app.patch("/jobs/{job_id}/", response_model=schemas.JobResponse)
 def update_status(job_id: int, status_update: schemas.StatusUpdate, db: Session = Depends(get_db)):
     old_job_status = db.query(models.Job).filter(models.Job.job_id == job_id).first()
     if not old_job_status:
@@ -110,7 +110,7 @@ def get_selector(intent: str, job_id: int, db: Session = Depends(get_db)):
             detail=f"Baseline for intent '{intent}' in job {job_id} not found."
         )
 
-@app.post("/selectors", response_model=schemas.SelectorResponse, status_code=201)
+@app.post("/selectors/", response_model=schemas.SelectorResponse, status_code=201)
 def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_db)):
    
    #need two columns of the Selector table to uniquely indentify the row
@@ -213,7 +213,7 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     db.refresh(new_heal_log)
     return new_heal_log
 
-@app.post("/heal_logs", status_code=201)
+@app.post("/heal_logs/", status_code=201)
 def new_heal_log(heal_log: schemas.HealLogBase, db: Session = Depends(get_db)):
     new_heal_log = models.HealLogs(**heal_log.model_dump())
     db.add(new_heal_log)
