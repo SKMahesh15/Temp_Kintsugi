@@ -4,3 +4,4 @@ backend/*.pyc
 node_modules/
 .env
 middleware/__pycache__/
+local_minilm_model/
