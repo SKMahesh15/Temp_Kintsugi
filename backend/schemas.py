@@ -52,3 +52,6 @@ class HealLogResponse(BaseModel):
     confidence: float
 
     model_config = {"from_attributes": True}
+
+class StatusUpdate(BaseModel):
+    status: str
