@@ -1,5 +1,5 @@
 async def run(page):
-    start_url = "http://127.0.0.1:5500/middleware/testware/test_web/test.html"
+    start_url = "http://127.0.0.1:5500/middleware/testweb/test.html"
     
     print("🚀 Step 1: Loading Job Board...")
     await page.goto(start_url)
