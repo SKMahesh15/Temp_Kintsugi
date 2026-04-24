@@ -52,16 +52,18 @@ def create_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_job)
 
+    strip_json = json.dumps(job.strip_config)
+
     # 3. AUTO-TRIGGER THE WRAPPER
     # sys.executable ensures the subprocess uses the same .venv as your backend
     # subprocess.Popen is non-blocking, so the API returns while the browser runs
     try:
         subprocess.Popen(
-            [sys.executable, WRAPPER_PATH, str(db_job.job_id)],
+            [sys.executable, WRAPPER_PATH, str(db_job.job_id), strip_json],
             stdout=sys.stdout,
             stderr=sys.stderr
         )
-        print(f"[*] Successfully launched Kintsugi Wrapper for Job {db_job.job_id}")
+        print(f"[*] Successfully launched Kintsugi Wrapper for Job {db_job.job_id} with custom strips")
     except Exception as e:
         print(f"[!] Critical Error: Failed to launch wrapper: {e}")
 
@@ -144,7 +146,9 @@ async def heal_endpoint(heal_body: schemas.HealRequest, db: Session = Depends(ge
     if not the_job:
         raise HTTPException(status_code=404, detail=f"job with id: {target_job_id} not found")
 
-    selector_row = db.query(models.Selectors).filter(models.Selectors.job_id == target_job_id, models.Selectors.intent == target_intent).first()
+    selector_row = db.query(models.Selectors).filter(
+    models.Selectors.intent == target_intent
+).order_by(models.Selectors.updated_at.desc()).first()
     if not selector_row:
         raise HTTPException(status_code=400, detail="No successful run recorded for this intent. Kintsugi can only heal selectors that have worked before.")
     last_success_dom = selector_row.last_success_dom

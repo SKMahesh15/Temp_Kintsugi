@@ -2,6 +2,7 @@ import httpx
 import asyncio
 import re
 import sys
+import json
 import os
 import importlib.util
 import tempfile
@@ -16,18 +17,34 @@ BACKEND_URL = "http://localhost:8000"
 # Adjust this path based on your actual folder structure
 BUNDLE_PATH = Path(__file__).parent.parent / "dom-stripper" / "dist" / "bundle.iife.js"
 
+JOB_ID = sys.argv[1]
+STRIP_CONFIG = {}
+if len(sys.argv) > 2:
+    try:
+        STRIP_CONFIG = json.loads(sys.argv[2])
+    except Exception as e:
+        print(f"Error parsing strip config: {e}")
+
 # --- CORE UTILITIES ---
 
-async def get_stripped_dom(page):
-    """Injects the stripper bundle and extracts the flat-list DOM."""
+async def get_stripped_dom(page, config=None):
+    """Injects the stripper bundle and extracts the flat-list DOM based on config."""
     if not BUNDLE_PATH.exists():
         raise FileNotFoundError(f"Bundle not found at {BUNDLE_PATH}.")
+    
+    # Use the global STRIP_CONFIG if no local config is passed
+    active_config = config if config is not None else STRIP_CONFIG
     
     bundle_code = BUNDLE_PATH.read_text(encoding="utf-8")
     await page.evaluate(bundle_code)
     
-    print("[Kintsugi] Stripping DOM...")
-    stripped_dom = await page.evaluate("Kintsugi.extractStrippedDOM()")
+    print(f"[Kintsugi] Stripping DOM with config: {active_config}")
+    
+    # Pass the Python dict into the JavaScript function
+    stripped_dom = await page.evaluate(
+        "(cfg) => Kintsugi.extractStrippedDOM(cfg)", 
+        active_config
+    )
     return stripped_dom
 
 def derive_intent(selector: str) -> str:
@@ -52,11 +69,10 @@ class KintsugiWrapper:
         self.current_dom = None
 
     async def get_latest_dom(self):
-        """Only strips the DOM if the URL has changed since the last check."""
         current_url = self.page.url
         if current_url != self.last_url or self.current_dom is None:
-            print(f"[Kintsugi] URL changed to {current_url}. Refreshing DOM cache...")
-            self.current_dom = await get_stripped_dom(self.page)
+            # Pass the global STRIP_CONFIG here
+            self.current_dom = await get_stripped_dom(self.page, STRIP_CONFIG)
             self.last_url = current_url
         return self.current_dom
     
@@ -136,7 +152,7 @@ class KintsugiWrapper:
             db_xpath = baseline["selector"] # The XPath we saved during the Happy Path
 
         # 2. CAPTURE CURRENT STATE: See what the broken page looks like
-        current_dom = await get_stripped_dom(self.page)
+        current_dom = await get_stripped_dom(self.page, STRIP_CONFIG)
 
         # 3. IDENTIFY TARGET: Find the exact node we are looking for in the baseline
         prev_node = next((n for n in last_success_dom if n.get("xpath") == db_xpath), None)
@@ -189,7 +205,7 @@ class KintsugiWrapper:
         # --- LAYER 4: GEMINI FALLBACK ---
         print("[Kintsugi] Layers 1-3 failed. Calling Layer 4 (Gemini)...")
         async with httpx.AsyncClient() as client:
-            gemini_resp = await client.post(f"{BACKEND_URL}/heal", json={
+            gemini_resp = await client.post(f"{BACKEND_URL}/heal/", json={
                 "job_id": self.job_id,
                 "intent": intent,
                 "old_selector": db_xpath,
