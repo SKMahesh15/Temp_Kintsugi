@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+
 const JobModal = ({ isOpen, onClose, color = "#00c97a" }) => {
 
   const [targeturl, settargeturl] = useState('');
@@ -18,7 +19,7 @@ const JobModal = ({ isOpen, onClose, color = "#00c97a" }) => {
         script: logic,
       };
 
-    const response = await axios.post('http://localhost:8000/jobs/', payload);
+      const response = await axios.post('http://localhost:8000/jobs/', payload);
       console.log('Job Created :', response.data);
       alert('Job Dispatched Succesfully !');
       onClose();
@@ -31,8 +32,6 @@ const JobModal = ({ isOpen, onClose, color = "#00c97a" }) => {
       setIsloading(false);
     }
   };
-
-
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
@@ -59,19 +58,20 @@ const JobModal = ({ isOpen, onClose, color = "#00c97a" }) => {
           </div>
 
           <div>
-            <label className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 ml-1">Logic / Prompt</label>
+            <label className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 ml-1">Script</label>
             <textarea
               rows="4"
               required 
               value={logic}
               onChange={(e)=>setLogic(e.target.value)}
-              placeholder="Describe the automation steps..."
+              placeholder="Paste Playwright script here"
               className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-zinc-500 transition-colors resize-none"
             />
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
             <button
+              type="button"
               onClick={onClose}
               className="px-6 py-2  text-xs text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
             >
