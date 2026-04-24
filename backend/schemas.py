@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 # this is so that users can create jobs without needing ids
 class JobCreate(BaseModel):
@@ -22,7 +22,7 @@ class SelectorBase(BaseModel):
     job_id: int
     intent: str
     selector: str
-    last_success_dom: Dict[str, Any] # aom is a dict(eg: {"role:button","name:login"})
+    last_success_dom: List[Any] # aom is a dict(eg: {"role:button","name:login"})
 
 class SelectorResponse(SelectorBase):
     selector_id: int
@@ -36,7 +36,7 @@ class HealLogBase(BaseModel):
     intent: str
     old_selector: str
     new_selector: str
-    current_dom: Dict[str, Any]
+    current_dom: List[Any]
     healed_by: str
     confidence: float
 
@@ -45,7 +45,7 @@ class HealRequest(BaseModel):
     job_id: int
     intent: str
     old_selector: str
-    current_dom: Dict[str, Any]
+    current_dom: List[Any]
 
 class HealLogResponse(BaseModel):
     new_selector: str
