@@ -9,20 +9,18 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from datetime import datetime, UTC
+import subprocess
+import sys
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WRAPPER_PATH = os.path.join(BASE_DIR, "middleware", "wrapper.py")
+
 
 load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials= True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # cors
 app.add_middleware(
     CORSMiddleware,
@@ -42,17 +40,28 @@ def get_db():
 @app.post("/jobs/", response_model=schemas.JobResponse, status_code=201)
 def create_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
 
-    # create a new job instance
+    # 1. Create a new job instance
     db_job = models.Job(
         script=job.script,
         target_url=job.target_url,
         status="queued"
     )
 
-    # add to db
+    # 2. Add to DB and commit to get the job_id
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
+
+    # 3. AUTO-TRIGGER THE WRAPPER
+    # sys.executable ensures the subprocess uses the same .venv as your backend
+    # subprocess.Popen is non-blocking, so the API returns while the browser runs
+    try:
+        subprocess.Popen([sys.executable, WRAPPER_PATH, str(db_job.job_id)])
+        print(f"[*] Successfully launched Kintsugi Wrapper for Job {db_job.job_id}")
+    except Exception as e:
+        print(f"[!] Critical Error: Failed to launch wrapper: {e}")
+
+    # 4. Return the job object to the frontend
     return db_job
 
 @app.get("/jobs/{job_id}", response_model=schemas.JobResponse)
@@ -79,15 +88,23 @@ def update_status(job_id: int, status: str, db: Session = Depends(get_db)):
     return old_job_status
 
 
-#endpoint for returning a Selector instance (a row) which has the intent as requested by middleware
+#endpoint for returning a Selector instance (a row) which has the intent and job_id as requested by middleware
 @app.get("/selectors/", response_model=schemas.SelectorResponse)
-def get_intent(intent: str, db: Session = Depends(get_db)):
-    selector = db.query(models.Selectors).filter(models.Selectors.intent == intent).first()
+def get_selector(intent: str, job_id: int, db: Session = Depends(get_db)):
+    # Filter by both intent and job_id
+    selector = db.query(models.Selectors).filter(
+        models.Selectors.intent == intent, 
+        models.Selectors.job_id == job_id
+    ).first()
 
     if selector:
         return selector
     else:
-        raise HTTPException(status_code=404, detail=f"script is running for the first time hence {intent} does not exists in the db")
+        # Status code 404 for first-run scenarios
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Baseline for intent '{intent}' in job {job_id} not found."
+        )
 
 @app.post("/selectors/", response_model=schemas.SelectorResponse, status_code=201)
 def save_new_selector(selector: schemas.SelectorBase, db: Session = Depends(get_db)):
