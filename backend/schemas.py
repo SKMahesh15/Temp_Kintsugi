@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 class JobCreate(BaseModel):
     script: str
     target_url: str
+    strip_config: dict
 
 class JobResponse(BaseModel): # sent to fe
     job_id: int

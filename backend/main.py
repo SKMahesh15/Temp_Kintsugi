@@ -52,16 +52,18 @@ def create_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_job)
 
+    strip_json = json.dumps(job.strip_config)
+
     # 3. AUTO-TRIGGER THE WRAPPER
     # sys.executable ensures the subprocess uses the same .venv as your backend
     # subprocess.Popen is non-blocking, so the API returns while the browser runs
     try:
         subprocess.Popen(
-            [sys.executable, WRAPPER_PATH, str(db_job.job_id)],
+            [sys.executable, WRAPPER_PATH, str(db_job.job_id), strip_json],
             stdout=sys.stdout,
             stderr=sys.stderr
         )
-        print(f"[*] Successfully launched Kintsugi Wrapper for Job {db_job.job_id}")
+        print(f"[*] Successfully launched Kintsugi Wrapper for Job {db_job.job_id} with custom strips")
     except Exception as e:
         print(f"[!] Critical Error: Failed to launch wrapper: {e}")
 
