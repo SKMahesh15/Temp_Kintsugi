@@ -24,7 +24,7 @@ app = FastAPI()
 # cors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", 'http://127.0.0.1:8000'],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -219,7 +219,24 @@ def new_heal_log(heal_log: schemas.HealLogBase, db: Session = Depends(get_db)):
     db.refresh(new_heal_log)
     return {"message": "heal log saved successfully"}
 
+# change by Tahseen 
 
+# Ensure these imports are at the top
+from typing import List
+
+@app.get("/heal_logs/", response_model=List[schemas.HealLogResponse])
+def get_heal_logs(db: Session = Depends(get_db)):
+    # Even though we query all, the response_model filters it to 2 fields
+    return db.query(models.HealLogs).all()
+
+@app.get("/all_selectors/", response_model=List[schemas.SelectorResponse])
+def get_all_selectors(db: Session = Depends(get_db)):
+    try:
+        selectors = db.query(models.Selectors).all()
+        return selectors
+    except Exception as e:
+        print(f"Error fetching selectors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 # check database.py for connection details
 # cd backend
 # ./venv/bin/python -m uvicorn main:app --reload
