@@ -95,19 +95,17 @@ def update_status(job_id: int, status_update: schemas.StatusUpdate, db: Session 
 #endpoint for returning a Selector instance (a row) which has the intent and job_id as requested by middleware
 @app.get("/selectors/", response_model=schemas.SelectorResponse)
 def get_selector(intent: str, job_id: int, db: Session = Depends(get_db)):
-    # Filter by both intent and job_id
+    # Find the MOST RECENT successful selector for this intent globally
     selector = db.query(models.Selectors).filter(
-        models.Selectors.intent == intent, 
-        models.Selectors.job_id == job_id
-    ).first()
+        models.Selectors.intent == intent
+    ).order_by(models.Selectors.updated_at.desc()).first()
 
     if selector:
         return selector
     else:
-        # Status code 404 for first-run scenarios
         raise HTTPException(
             status_code=404, 
-            detail=f"Baseline for intent '{intent}' in job {job_id} not found."
+            detail=f"No historical baseline found for intent '{intent}'."
         )
 
 @app.post("/selectors/", response_model=schemas.SelectorResponse, status_code=201)
